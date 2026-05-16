@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id_producto       String   @id @default(cuid())
+  nombre_producto   String
+  descripcion       String?  //Signo ? significa que es opcional (puede ir vacío)
+  stock             Int      @default(0)
+  precio            Int
+  fecha_vencimiento DateTime? //Tipo fecha y opcional
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
