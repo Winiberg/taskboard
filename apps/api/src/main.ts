@@ -10,14 +10,14 @@ async function bootstrap() {
   // 1. CONFIGURACIÓN DE VALIDACIONES GLOBALES
   // Esto hace que NestJS revise automáticamente las reglas de tus productos
   app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Ignora datos extraños que no pertenezcan al producto
+    new ValidationPipe({//Asegura que solo pasen los datos definidos
+      whitelist: true, // Filtra datos no definidos en DTOs
       transform: true, // Convierte los tipos de datos automáticamente (ej: texto a número)
     }),
   );
 
   // 2. CONFIGURACIÓN DE CORS
-  // Permite que tu Frontend (Vite en puerto 5173) pueda pedirle datos al Backend
+  // Permite que Frontend (Vite en puerto 5173) pueda pedirle datos al Backend
   app.enableCors({
     origin: 'http://localhost:5173',
     credentials: true,
@@ -25,7 +25,7 @@ async function bootstrap() {
 
   // 3. CONFIGURACIÓN DE SWAGGER (DOCUMENTACIÓN INTERACTIVA)
   const config = new DocumentBuilder()
-    .setTitle('Sistema de Inventario API')
+    .setTitle('Sistema de Inventario')
     .setDescription('Endpoints para la gestión y control del inventario de productos')
     .setVersion('1.0')
     .build();

@@ -8,16 +8,19 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // 1. CREAR UN PRODUCTO
+  // 1. CREAR UN PRODUCTO
   async create(createProductDto: CreateProductDto) {
     let fechaConvertida: Date | undefined = undefined;
 
     if (createProductDto.fecha_vencimiento) {
-      // Separamos el string "DD-MM-AAAA" por sus guiones
-      const [dia, mes, anio] = createProductDto.fecha_vencimiento.split('-');
-      // Creamos el objeto Date en formato ISO que entiende JS y PostgreSQL
-      fechaConvertida = new Date(`${anio}-${mes}-${dia}T00:00:00.000Z`);
+      // Como ahora recibes YYYY-MM-DD, creamos el Date directamente
+      fechaConvertida = new Date(createProductDto.fecha_vencimiento);
 
-      // REGLA DE NEGOCIO: Validar que la fecha de vencimiento sea hoy o en el futuro
+      // REGLA DE NEGOCIO: Validar que la fecha sea válida y futura
+      if (isNaN(fechaConvertida.getTime())) {
+        throw new BadRequestException('Formato de fecha inválido.');
+      }
+
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0);
 
@@ -29,8 +32,8 @@ export class ProductsService {
     // Guardar físicamente en PostgreSQL usando Prisma
     return this.prisma.product.create({
       data: {
+        // Usamos el spread, pero debemos sobreescribir la fecha convertida
         ...createProductDto,
-        // Reemplazamos el string chileno por el objeto Date real para Prisma
         fecha_vencimiento: fechaConvertida, 
       },
     });

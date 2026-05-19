@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsInt, Min, IsOptional, Matches } from 'class-validator'; // <-- Cambiamos IsDateString por Matches
+import { IsString, IsNotEmpty, IsInt, Min, IsOptional, IsISO8601 } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({ description: 'Nombre descriptivo del producto' })
@@ -17,16 +17,16 @@ export class CreateProductDto {
   @Min(0, { message: 'El stock no puede ser un valor negativo' })
   stock!: number;
 
-  @ApiProperty({ description: 'Precio unitario del producto en CLP' })
-  @IsInt({ message: 'El precio debe ser un número entero (pesos chilenos)' })
+  @ApiProperty({ description: 'Precio unitario del producto' })
+  @IsInt({ message: 'El precio debe ser un número entero' })
   @Min(1, { message: 'El precio debe ser un número positivo mayor a cero' })
   precio!: number;
 
-  //Formato (DD-MM-AAAA)
-  @ApiPropertyOptional({ description: 'Fecha de vencimiento del producto (Formato: DD-MM-AAAA)', example: '30-01-2027' })
-  @Matches(/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/, {
-    message: 'La fecha de vencimiento debe tener el formato DD-MM-AAAA (ejemplo: 30-01-2027)',
+  @ApiPropertyOptional({ 
+    description: 'Fecha de vencimiento del producto (Formato ISO 8601: AAAA-MM-DD)', 
+    example: '2027-01-30' 
   })
+  @IsISO8601({ strict: true }, { message: 'La fecha de vencimiento debe tener el formato ISO 8601 (AAAA-MM-DD)' })
   @IsOptional()
   fecha_vencimiento?: string;
 }
