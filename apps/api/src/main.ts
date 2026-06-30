@@ -27,7 +27,8 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Sistema de Inventario')
     .setDescription('Endpoints para la gestión y control del inventario de productos')
-    .setVersion('1.0')
+    .setVersion('2.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

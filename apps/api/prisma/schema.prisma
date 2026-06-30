@@ -7,19 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id_producto       String   @id @default(cuid())
-  nombre_producto   String
-  descripcion       String?  //Signo ? significa que es opcional (puede ir vacío)
-  stock             Int      @default(0)
-  precio            Int
-  fecha_vencimiento DateTime? //Tipo fecha y opcional
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+// 1. Roles del sistema
+enum Role {
+  ADMIN
+  VENDEDOR
 }
 
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
+// 2. Modelo de Usuario
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(VENDEDOR)
+  sales        Sale[]   // Relación: Un vendedor emite muchas boletas/ventas
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// 3. Modelo de Producto (Inventario Global)
+model Product {
+  id_producto       String       @id @default(cuid())
+  nombre_producto   String
+  descripcion       String?
+  stock             Int          @default(0)
+  precio            Int
+  fecha_vencimiento DateTime?
+  saleDetails       SaleDetail[] // Relación: Un producto puede estar en muchos detalles de boletas
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+// 4. CABECERA DE LA VENTA (La Boleta)
+model Sale {
+  id_venta    String       @id @default(cuid())
+  total       Int          // El total de la boleta (ej: 23950)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // El vendedor que realizó la venta (Aislamiento de la Evaluación 2)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Las líneas de detalle que componen esta boleta
+  details     SaleDetail[]
+
+  @@index([userId])
+}
+
+// 5. DETALLE DE LA VENTA (Las líneas de la boleta)
+model SaleDetail {
+  id_detalle      String   @id @default(cuid())
+  cantidad        Int      @default(1) // Ej: 3 galletas
+  precio_unitario Int      // Guardamos el precio del momento por si llega a cambiar en el inventario
+
+  // Conexión con la boleta padre
+  id_venta        String
+  sale            Sale     @relation(fields: [id_venta], references: [id_venta], onDelete: Cascade)
+
+  // Conexión con el producto vendido
+  id_producto     String
+  product         Product  @relation(fields: [id_producto], references: [id_producto], onDelete: Cascade)
+
+  @@index([id_venta])
+  @@index([id_producto])
 }
