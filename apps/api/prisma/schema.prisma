@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Roles del sistema
+// 1. Roles del sistema (Evaluación 3)
 enum Role {
   ADMIN
   VENDEDOR
@@ -46,7 +46,7 @@ model Sale {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  // El vendedor que realizó la venta (Aislamiento de la Evaluación 2)
+  // El vendedor que realizó la venta
   userId      String
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -74,7 +74,7 @@ model SaleDetail {
   @@index([id_producto])
 }
 
-// 6. SÉPTIMO MODELO: CONTROL DE TOKENS Y ROTACIÓN (Requerimiento Evaluación 3)
+// 6. CONTROL DE TOKENS Y ROTACIÓN (Evaluación 3)
 model RefreshToken {
   id                String   @id @default(cuid()) // Mantenemos consistencia usando cuid()
   jti               String   @unique              // Identificador único de este token específico
