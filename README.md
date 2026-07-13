@@ -1,149 +1,83 @@
-Guia de Inicio Rapido - Proyecto Taskboard (Backend API & Ventas)
-Este documento contiene el paso a paso detallado para descargar el proyecto, configurar el entorno local en Visual Studio Code, levantar la base de datos en Docker y ejecutar las pruebas del CRUD de productos y el flujo de seguridad multiusuario de ventas correspondientes a la evaluación.
+# Sistema de Inventario y Punto de Venta (Evaluación 3)
 
-Requisitos Previos
-Para el correcto funcionamiento del proyecto se requiere la instalación de los siguientes componentes en el sistema operativo:
+Este proyecto consiste en una aplicación web full-stack que implementa un sistema seguro de autenticación multiusuario utilizando una arquitectura basada en **NestJS, Prisma y JWT (Access Tokens con Refresh Tokens rotativos)** en el Backend, acoplada a una interfaz reactiva desarrollada en **React, Vite y TanStack Query** en el Frontend. La solución permite la segregación de funciones por roles y el control estricto de acceso a recursos protegidos.
 
-Visual Studio Code: Editor de texto para la visualización y gestión del código.
+## Requisitos Previos
 
-Node.js (Versión LTS): Entorno de ejecución para JavaScript y TypeScript.
+Antes de proceder con la instalación, asegúrate de contar con las siguientes herramientas en tu equipo:
+* **Node.js** (Versión 18 o superior recomendada)
+* **pnpm** (Gestor de paquetes obligatorio para la administración de este monorepo)
+* **Docker** (Requerido para inicializar el contenedor de la base de datos relacional)
 
-Docker Desktop: Sistema de contenedores para inicializar la base de datos de manera aislada.
+---
 
-pnpm: Gestor de paquetes utilizado en el proyecto. En caso de no tenerlo instalado, abrir la terminal del sistema (CMD o PowerShell) y ejecutar el siguiente comando:
+## Guía de Instalación y Configuración Local
 
-npm install -g pnpm
+Sigue detenidamente estos pasos en el orden indicado para clonar, configurar y desplegar el entorno de desarrollo:
 
-Paso 1: Descargar el Proyecto desde GitHub
-Acceder al enlace del repositorio público provisto.
+### 1. Clonar el repositorio e instalar dependencias
+Abre tu terminal y ejecuta los siguientes comandos de Git y del gestor de paquetes:
+```bash
+# Clonar el proyecto localmente
+git clone <URL_DE_ESTE_REPOSITORIO>
 
-Hacer clic en el botón Code situado en la parte superior derecha de la lista de archivos.
+# Acceder al directorio raíz del proyecto
+cd <NOMBRE_DE_LA_CARPETA>
 
-Seleccionar la opción Download ZIP.
-
-Extraer el contenido del archivo comprimido en un directorio local de preferencia.
-
-Paso 2: Apertura e Instalación de Dependencias en VS Code
-Iniciar Visual Studio Code.
-
-Seleccionar la opción File, luego Open Folder y elegir la carpeta raíz del proyecto descomprimido denominada taskboard.
-
-Desplegar una nueva terminal integrada mediante el menú Terminal y la opción New Terminal.
-
-Cambiar el directorio de trabajo hacia la ubicación de la API con el siguiente comando:
-
-cd apps/api
-
-Ejecutar la instalación de los módulos necesarios con el comando:
-
+# Instalar todas las dependencias del monorepo
 pnpm install
+```
 
-Para el Frontend, abrir otra terminal (o retroceder directorios) e instalar sus módulos correspondientes:
+### 2. Configurar las Variables de Entorno (`.env`)
+El proyecto se encuentra organizado como un espacio de trabajo modular (monorepo) compuesto por las aplicaciones `apps/api` y `apps/web`. Debes crear de forma manual un archivo `.env` en la raíz de cada una de estas aplicaciones para asegurar su correcto inicio.
 
-cd ../../frontend
-pnpm install
+#### 🔐 Backend: Configuración del archivo `apps/api/.env`
+Crea el archivo en la ruta correspondiente y define las siguientes variables esenciales para la base de datos y la firma segura de claves criptográficas:
+```env
+# URL de conexión a la base de datos PostgreSQL local
+DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public"
 
-Paso 3: Inicialización de la Base de Datos en Docker
-El servidor requiere que el motor de base de datos se encuentre activo antes de iniciar su ejecución:
+# Configuración de seguridad para el ciclo de vida de los tokens JWT
+JWT_SECRET=dev_access_secret
+JWT_EXPIRES=900
+JWT_REFRESH_SECRET=dev_refresh_secret
+JWT_REFRESH_EXPIRES=1209600
+```
 
-Iniciar la aplicación Docker Desktop.
+#### 🌐 Frontend: Configuración del archivo `apps/web/.env`
+Crea el archivo en la ruta correspondiente para enlazar el cliente con la dirección HTTP de tu servidor backend:
+```env
+VITE_API_URL=http://localhost:3000
+```
 
-Dirigirse a la sección Containers en el panel lateral izquierdo.
+### 3. Sincronizar la Base de Datos (Docker + Prisma)
+1. Inicia el servicio de base de datos relacional desde tu contenedor de **Docker**.
+2. Desde la terminal en el directorio raíz del proyecto, ejecuta el siguiente comando para aplicar las migraciones de Prisma y actualizar el esquema en la base de datos activa:
+```bash
+pnpm --filter api prisma migrate dev
+```
 
-Localizar el contenedor asociado al proyecto, denominado infra.
+### 4. Ejecutar el Entorno de Desarrollo
+Para poner en marcha de forma simultánea tanto la API del servidor como la interfaz gráfica, abre **dos terminales independientes** situadas en la raíz del proyecto y ejecuta los siguientes comandos:
 
-Hacer clic en el botón de inicio (Start / icono de reproducción). Verificar que el estado cambie a color verde indicando que se encuentra en ejecución.
+* **Terminal 1 - Servidor Backend (API):**
+  ```bash
+  pnpm -C apps/api start:dev
+  ```
+* **Terminal 2 - Cliente Frontend (Web):**
+  ```bash
+  pnpm -C apps/web dev
+  ```
 
-Paso 4: Sincronización del Esquema de Datos con Prisma
-Con la base de datos activa, se deben estructurar las tablas correspondientes en PostgreSQL. En la terminal de VS Code, dentro de la ruta apps/api, ejecutar el siguiente comando:
+Una vez completados los despliegues, podrás acceder a la documentación interactiva y pruebas de endpoints de la API en `http://localhost:3000/api/docs` (Swagger UI), y navegar por la aplicación web reactiva desde tu navegador en `http://localhost:5173`.
 
-pnpm prisma db push
+---
 
-El proceso finalizará correctamente al desplegar el mensaje: Your database is now in sync with your Prisma schema.
+## 👥 Resumen de Capacidades de Autenticación y Control Evaluadas
 
-En caso de que el proyecto cuente con los usuarios base de la prueba cargados en el script de seed, ejecutar:
-
-pnpm prisma db seed
-
-Cuentas de Acceso Pre-cargadas para la Evaluación
-Vendedor 1: vendedor1@empresa.com (Contraseña: 123456) -> Registro de ventas propias y validación de autoría.
-
-Vendedor 2: vendedor2@empresa.com (Contraseña: 123456) -> Simulación de intruso / Intento de hackeo de datos ajenos.
-
-Administrador: admin@empresa.com (Contraseña: 123456) -> Auditoría global y visualización total de registros.
-
-Paso 5: Lanzamiento de los Servidores de Desarrollo
-Para iniciar la aplicación en modo de observación, ejecutar el siguiente comando en la terminal dentro de apps/api:
-
-pnpm start:dev
-
-Para levantar el entorno gráfico del Frontend, ejecutar en su respectiva terminal:
-
-pnpm dev
-
-Una vez finalizada la inicialización, los accesos activos del sistema serán:
-
-Servidor de la API activo en: http://localhost:3000
-
-Documentación de la API (Swagger UI) en: http://localhost:3000/api/docs
-
-Aplicación Frontend Web activa en: http://localhost:5173
-
-Paso 6: Ejecución de Pruebas en la Interfaz de Swagger
-Abra el navegador web e ingrese a la dirección: http://localhost:3000/api/docs
-
-Escenario A: Gestión de Catálogo y Fechas Chilenas (Products)
-Localizar el controlador de productos denominado products.
-
-Desplegar el método POST /products y seleccionar la opción Try it out.
-
-En el cuerpo de la petición (Request body), reemplazar la estructura por el siguiente formato que utiliza la nomenclatura de fecha chilena (DD-MM-AAAA):
-
-{
-"nombre_producto": "Triton",
-"descripcion": "Galleta de chocolate",
-"stock": 100,
-"precio": 1000,
-"fecha_vencimiento": "30-01-2027"
-}
-
-Hacer clic en el botón Execute. La plataforma debe retornar un código de estado 201 Created junto con el objeto guardado e indexado con un identificador único. Copie el ID del producto generado (id_producto).
-
-Para comprobar las restricciones del sistema, realizar una prueba ingresando una fecha anterior a la actual (por ejemplo: 10-05-2020) o alterando el formato. El servidor responderá con un código 400 Bad Request detallando la infracción en el idioma configurado.
-
-Validar el funcionamiento del resto de las operaciones CRUD utilizando los métodos GET (ingresando parámetros de paginación skip y take), PATCH para modificaciones parciales y DELETE para remoción de registros.
-
-Escenario B: Control de Acceso y Aislamiento Multiusuario (Sales)
-Para demostrar el resguardo de privacidad y aislamiento exigido por la rúbrica de evaluación, ejecute la siguiente secuencia:
-
-Autenticar Vendedor 1: Diríjase al controlador auth, expanda POST /auth/login e ingrese las credenciales de vendedor1@empresa.com. Copie el token JWT recibido en la respuesta.
-
-Autorizar en Swagger: Suba al inicio de la página, haga clic en el botón Authorize (icono de candado), pegue el token copiado y presione el botón Authorize.
-
-Registrar Venta (POST /sales): Vaya al controlador sales, use el método POST /sales, presione Try it out y envíe el JSON del carrito sustituyendo el campo por el ID real del producto creado en el Escenario A:
-
-{
-"items": [
-{
-"id_producto": "PEGAR_AQUI_EL_ID_DEL_PRODUCTO",
-"cantidad": 3
-}
-]
-}
-
-Haga clic en Execute (201 Created) y copie el ID de la venta (id) devuelto en el JSON de respuesta.
-4. Simular Intrusión con Vendedor 2: Regrese a POST /auth/login e inicie sesión usando los accesos de vendedor2@empresa.com. Copie su nuevo token, presione el botón Authorize de arriba, haga clic en Logout para limpiar la sesión anterior, pegue el token del Vendedor 2 y active la autorización.
-5. Comprobar Bloqueo de Seguridad: Intente consultar la venta del Vendedor 1 usando GET /sales/{id}, o intente modificarla con PATCH /sales/{id} (enviando el objeto vacío {} en el cuadro de texto) o eliminarla con DELETE /sales/{id} ingresando el ID de la venta guardada en el punto 3.
-
-Resultado Esperado: La API bloqueará la petición devolviendo un código 404 Not Found o 403 Forbidden, demostrando que un vendedor tiene estrictamente prohibido manipular o conocer la existencia de registros ajenos.
-
-Auditoría Global (ADMIN): Autentíquese con la cuenta admin@empresa.com y coloque su token en el candado de Swagger. Ejecute el método GET /sales de listar. El Administrador listará de forma transparente todas las ventas históricas del comercio para tareas de supervisión y cuadratura.
-
-Escenario C: Comprobación en el Frontend
-Ingrese a http://localhost:5173 desde su navegador web.
-
-Al iniciar sesión con un Vendedor, corrobora que la interfaz oculta dinámicamente los gráficos financieros corporativos y el maestro de stock para evitar la competencia desleal y resguardar el inventario.
-
-Al ingresar como Admin, el sistema habilitará automáticamente el Dashboard de KPIs de ventas totales y alertas de reaprovisionamiento.
-
-Nota tecnica: El entorno ha sido fijado en la versión 5.15.0 de Prisma CLI y Prisma Client para asegurar la total compatibilidad con las especificaciones de la entrega.
+La aplicación cubre rigurosamente los siguientes lineamientos técnicos y de seguridad exigidos en la rúbrica de evaluación del producto computacional terminado:
+* **Flujo de Acceso Multiusuario**: Registro de usuarios (`signup`) con encriptación de credenciales mediante bcrypt, inicio de sesión seguro (`login`) y recuperación del estado del usuario autenticado (`me`).
+* **Seguridad Avanzada mediante Tokens**: Implementación de Access Tokens de corta duración emparejados con Refresh Tokens de larga duración. El sistema persiste únicamente el hash SHA-256 de los tokens de refresco en la base de datos, mitigando la exposición de credenciales legibles en texto plano.
+* **Mecanismo de Rotación Automatizado**: Cada vez que se solicita una renovación de sesión, el token de refresco antiguo es revocado y enlazado a un nuevo JTI en la base de datos, detectando y bloqueando de inmediato cualquier intento de reutilización maliciosa.
+* **Control de Acceso por Roles (RBAC)**: Restricción selectiva de recursos tanto en el backend mediante Guards especializados como en el frontend de forma dinámica. Los usuarios con rol `ADMIN` acceden a herramientas de gestión de stock e historiales de auditoría global, mientras que los usuarios con rol `VENDEDOR` operan estrictamente sobre sus propios carritos de compra y registros de turno.
+* **Cierre de Sesión Seguro y Resiliencia**: Endpoint `/auth/logout` para la invalidación lógica e inmediata de los tokens en el servidor. Adicionalmente, el frontend cuenta con interceptores de respuesta en Axios que capturan de forma inteligente errores `401 Unauthorized` para renovar la sesión de fondo o, en su defecto, limpiar la memoria y forzar la redirección al inicio de sesión.

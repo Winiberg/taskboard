@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { $Enums } from '@prisma/client'; // Importamos el enum oficial de Prisma para los roles
 
 @Injectable()
 export class SalesService {
@@ -69,13 +70,10 @@ export class SalesService {
     });
   }
 
-  // LISTAR VENTAS (AISLAMIENTO MULTIUSUARIO SOLICITADO)
-  async findAll(userId: string) {
-    // Primero averiguamos el rol de quien consulta
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
+  // LISTAR VENTAS (Aislamiento multiusuario optimizado sin re-consultar el usuario)
+  async findAll(userId: string, role: $Enums.Role) {
     // Si es ADMIN: Puede ver absolutamente todas las ventas de la empresa
-    if (user?.role === 'ADMIN') {
+    if (role === $Enums.Role.ADMIN) {
       return this.prisma.sale.findMany({
         include: {
           user: { select: { name: true, email: true, role: true } },
@@ -87,7 +85,7 @@ export class SalesService {
 
     // Si es VENDEDOR: Filtro estricto en la BD por su propio userId
     return this.prisma.sale.findMany({
-      where: { userId }, // Aislamiento multiusuario
+      where: { userId }, 
       include: {
         details: { include: { product: true } },
       },
@@ -95,12 +93,10 @@ export class SalesService {
     });
   }
 
-  // OBTENER UNA VENTA POR ID (CON FILTRO DE SEGURIDAD MULTIUSUARIO)
-  async findOne(id: string, userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-    // Si es ADMIN busca la venta de forma global; si es VENDEDOR, restringe la búsqueda a su propio userId
-    const whereClause = user?.role === 'ADMIN' ? { id_venta: id } : { id_venta: id, userId };
+  // OBTENER UNA VENTA POR ID (Con filtro de seguridad directo desde los parámetros del token)
+  async findOne(id: string, userId: string, role: $Enums.Role) {
+    // Determinamos la cláusula basándonos directamente en el rol que vino del JWT
+    const whereClause = role === $Enums.Role.ADMIN ? { id_venta: id } : { id_venta: id, userId };
 
     const sale = await this.prisma.sale.findFirst({
       where: whereClause,
@@ -117,10 +113,10 @@ export class SalesService {
     return sale;
   }
 
-  // ACTUALIZAR UNA VENTA PROPIA (EXIGENCIA DE RÚBRICA)
-  async update(id: string, userId: string, updateSaleDto: any) {
-    // findOne validará automáticamente la propiedad del registro lanzando 404 si no le pertenece
-    await this.findOne(id, userId);
+  // ACTUALIZAR UNA VENTA PROPIA (Exigencia de rúbrica)
+  async update(id: string, userId: string, role: $Enums.Role, updateSaleDto: any) {
+    // findOne validará automáticamente la existencia y propiedad usando el rol del token
+    await this.findOne(id, userId, role);
 
     return this.prisma.sale.update({
       where: { id_venta: id },
@@ -128,10 +124,10 @@ export class SalesService {
     });
   }
 
-  // ELIMINAR UNA VENTA PROPIA (EXIGENCIA DE RÚBRICA - BORRADO FÍSICO SEGURO)
-  async remove(id: string, userId: string) {
-    // findOne validará automáticamente la propiedad del registro lanzando 404 si no le pertenece
-    await this.findOne(id, userId);
+  // ELIMINAR UNA VENTA PROPIA (Exigencia de rúbrica - Borrado físico seguro)
+  async remove(id: string, userId: string, role: $Enums.Role) {
+    // findOne validará automáticamente la existencia y propiedad usando el rol del token
+    await this.findOne(id, userId, role);
 
     return this.prisma.sale.delete({
       where: { id_venta: id },

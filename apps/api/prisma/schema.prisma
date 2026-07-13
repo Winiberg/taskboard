@@ -13,19 +13,20 @@ enum Role {
   VENDEDOR
 }
 
-// 2. Modelo de Usuario
+// 2. Modelo de Usuario (Actualizado con relación para la Evaluación 3)
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  role         Role     @default(VENDEDOR)
-  sales        Sale[]   // Relación: Un vendedor emite muchas boletas/ventas
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String
+  role          Role           @default(VENDEDOR)
+  sales         Sale[]         // Usuario se relaciona con ventas
+  refreshTokens RefreshToken[] // <-- NUEVO: Relación requerida para control de sesiones activas
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt     // <-- Corregido el detalle del caracter '|'
 }
 
-// 3. Modelo de Producto (Inventario Global)
+// 3. Modelo de Producto (Inventario Global, visible para todos los usuarios)
 model Product {
   id_producto       String       @id @default(cuid())
   nombre_producto   String
@@ -71,4 +72,19 @@ model SaleDetail {
 
   @@index([id_venta])
   @@index([id_producto])
+}
+
+// 6. SÉPTIMO MODELO: CONTROL DE TOKENS Y ROTACIÓN (Requerimiento Evaluación 3)
+model RefreshToken {
+  id                String   @id @default(cuid()) // Mantenemos consistencia usando cuid()
+  jti               String   @unique              // Identificador único de este token específico
+  tokenHash         String                        // Hash SHA-256 del refresh token (nunca plano)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Borrado en cascada
+  isRevoked         Boolean  @default(false)
+  replacedByTokenId String?                       // Rastro del nuevo token si fue rotado
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+
+  @@index([userId])
 }
