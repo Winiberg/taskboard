@@ -19,11 +19,11 @@ model User {
   email         String         @unique
   name          String?
   passwordHash  String
-  role          Role           @default(VENDEDOR)
+  role          Role           @default(VENDEDOR) // Evaluacion 3
   sales         Sale[]         // Usuario se relaciona con ventas
-  refreshTokens RefreshToken[] // <-- NUEVO: Relación requerida para control de sesiones activas
+  refreshTokens RefreshToken[] // Evaluacion 3: Relación requerida para control de sesiones activas
   createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt     // <-- Corregido el detalle del caracter '|'
+  updatedAt     DateTime       @updatedAt
 }
 
 // 3. Modelo de Producto (Inventario Global, visible para todos los usuarios)

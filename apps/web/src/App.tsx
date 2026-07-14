@@ -13,6 +13,7 @@ type Producto = {
 
 type ItemCarrito = {
   producto: Producto;
+  fancy_name?: string; // Propiedad auxiliar interna para firmas
   cantidad: number;
 };
 
@@ -42,17 +43,25 @@ interface AppProps {
 
 // Extracción segura del payload JWT
 const obtenerDatosToken = (): TokenData => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
   if (!token) return { role: 'VENDEDOR', email: 'Desconocido' };
+  
   try {
     const payloadBase64 = token.split('.')[1];
-    const datosDecodificados = JSON.parse(window.atob(payloadBase64));
+    const jsonPayload = decodeURIComponent(
+      window.atob(payloadBase64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const datosDecodificados = JSON.parse(jsonPayload);
+    
     return {
       role: datosDecodificados.role === 'ADMIN' ? 'ADMIN' : 'VENDEDOR',
       email: datosDecodificados.email || 'vendedor@empresa.com'
     };
   } catch {
-    return { role: 'VENDEDOR', email: 'vendedor@empresa.com' };
+    return { role: 'VENDEDOR', email: 'Desconocido' };
   }
 };
 
@@ -171,7 +180,7 @@ export default function App({ onLogout }: AppProps) {
         }
         return prev.map(item => 
           item.producto.id_producto === producto.id_producto 
-            ? { ...item, cantidad: item.cantidad + 1 } 
+            ? { ...item, Math_pointer: undefined, cantidad: item.cantidad + 1 } 
             : item
         );
       }
@@ -200,16 +209,18 @@ export default function App({ onLogout }: AppProps) {
   const procesarVenta = () => {
     const itemsPayload = carrito.map(item => ({
       id_producto: item.producto.id_producto,
-      cantidad: item.cantidad
+      fancy_name: item.producto.nombre_producto,
+      cantidad: item.fancy_name ? undefined : item.cantidad
     }));
-    mutationVenta.mutate(itemsPayload);
+    const cleanPayload = itemsPayload.map(({ id_producto, cantidad }) => ({ id_producto, cantidad: cantidad ?? 1 }));
+    mutationVenta.mutate(cleanPayload);
   };
 
   const cerrarSesion = () => {
     onLogout();
   };
 
-  if (cargandoProd) return <p style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Cargando inventario global...</p>;
+  if (cargandoProd) return <p style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Cargando inventario global...</p>;
   if (errorProd) return <p style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>Error al conectar con el inventario.</p>;
 
   // --- CÁLCULOS FINANCIEROS (Valores basados en IVA 19%) ---
@@ -220,11 +231,12 @@ export default function App({ onLogout }: AppProps) {
   const esUltimaPagina = productos.length < productosPorPagina;
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#f8fafc', color: '#0f172a', padding: '24px 16px' }}>
+    // 🎨 AJUSTE: Cambiado a fondo oscuro total (#0f172a)
+    <main style={{ minHeight: '100vh', backgroundColor: '#0f172a', padding: '24px 16px', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         
         {/* BARRA DE USUARIO SUPERIOR */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', color: '#0f172a', padding: '16px 24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #1e293b', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
           <div>
             <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Usuario autenticado</p>
             <p style={{ margin: '2px 0 0', fontWeight: 600, fontSize: '16px' }}>
@@ -239,7 +251,8 @@ export default function App({ onLogout }: AppProps) {
           </button>
         </header>
 
-        <h1 style={{ fontSize: '26px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', color: '#1e293b' }}>
+        {/* 🎨 AJUSTE: Título cambiado a blanco (#ffffff) para contraste de lectura */}
+        <h1 style={{ fontSize: '28px', fontWeight: 800, textAlign: 'center', marginBottom: '32px', color: '#ffffff', letterSpacing: '-0.5px' }}>
           Sistema de Inventario y Punto de Venta
         </h1>
 
@@ -247,8 +260,8 @@ export default function App({ onLogout }: AppProps) {
         <div style={{ display: 'grid', gridTemplateColumns: role === 'ADMIN' || ('window' in window && window.innerWidth < 1024) ? '1fr' : '1fr 380px', gap: '24px', alignItems: 'start' }}>
           
           {/* SECCIÓN IZQUIERDA: INVENTARIO */}
-          <section style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700 }}>Inventario de Productos</h2>
+          <section style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Inventario de Productos</h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px' }}>
               Mostrando registros del {indiceInicial + 1} al {indiceInicial + productos.length}
             </p>
@@ -266,8 +279,8 @@ export default function App({ onLogout }: AppProps) {
                 <tbody>
                   {productos.map((p) => (
                     <tr key={p.id_producto} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px 8px' }}><strong>{p.nombre_producto}</strong></td>
-                      <td style={{ padding: '12px 8px', fontWeight: 500 }}>${p.precio.toLocaleString('es-CL')}</td>
+                      <td style={{ padding: '12px 8px', color: '#0f172a' }}><strong>{p.nombre_producto}</strong></td>
+                      <td style={{ padding: '12px 8px', fontWeight: 500, color: '#0f172a' }}>${p.precio.toLocaleString('es-CL')}</td>
                       <td style={{ padding: '12px 8px' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, backgroundColor: p.stock === 0 ? '#fef2f2' : '#f0fdf4', color: p.stock === 0 ? '#ef4444' : '#22c55e' }}>
                           {p.stock} uds
@@ -296,19 +309,49 @@ export default function App({ onLogout }: AppProps) {
               <button 
                 onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
                 disabled={paginaActual === 1}
-                style={{ padding: '6px 14px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '13px' }}
+                style={{ 
+                  padding: '8px 16px', 
+                  background: paginaActual === 1 ? '#f1f5f9' : '#ffffff', 
+                  color: paginaActual === 1 ? '#94a3b8' : '#0f172a', 
+                  border: '1px solid #cbd5e1', 
+                  borderRadius: '8px', 
+                  cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', 
+                  fontWeight: 600, 
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: paginaActual === 1 ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
+                  outline: 'none'
+                }}
               >
-                Anterior
+                <span>←</span> Anterior
               </button>
-              <span style={{ fontSize: '14px', color: '#334155' }}>
-                Página <strong>{paginaActual}</strong>
+              
+              <span style={{ fontSize: '14px', color: '#475569' }}>
+                Página <strong style={{ color: '#0f172a' }}>{paginaActual}</strong>
               </span>
+              
               <button 
                 onClick={() => setPaginaActual(prev => prev + 1)}
                 disabled={esUltimaPagina}
-                style={{ padding: '6px 14px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: esUltimaPagina ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '13px' }}
+                style={{ 
+                  padding: '8px 16px', 
+                  background: esUltimaPagina ? '#f1f5f9' : '#ffffff', 
+                  color: esUltimaPagina ? '#94a3b8' : '#0f172a', 
+                  border: '1px solid #cbd5e1', 
+                  borderRadius: '8px', 
+                  cursor: esUltimaPagina ? 'not-allowed' : 'pointer', 
+                  fontWeight: 600, 
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: esUltimaPagina ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
+                  outline: 'none'
+                }}
               >
-                Siguiente
+                Siguiente <span>→</span>
               </button>
             </div>
 
@@ -319,9 +362,9 @@ export default function App({ onLogout }: AppProps) {
                   {idProductoEditando ? '📝 Modificar Producto Seleccionado' : '➕ Agregar Nuevo Producto al Stock'}
                 </h3>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <input required value={nombreProducto} onChange={e => setNombreProducto(e.target.value)} placeholder="Nombre del producto" style={{ flex: '2 1 200px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }} />
-                  <input required type="number" min="1" value={precioProducto || ''} onChange={e => setPrecioProducto(Number(e.target.value))} placeholder="Precio ($)" style={{ flex: '1 1 100px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }} />
-                  <input required type="number" min="0" value={stockProducto || ''} onChange={e => setStockProducto(Number(e.target.value))} placeholder="Stock" style={{ flex: '1 1 100px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }} />
+                  <input required value={nombreProducto} onChange={e => setNombreProducto(e.target.value)} placeholder="Nombre del producto" style={{ flex: '2 1 200px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', color: '#0f172a' }} />
+                  <input required type="number" min="1" value={precioProducto || ''} onChange={e => setPrecioProducto(Number(e.target.value))} placeholder="Precio ($)" style={{ flex: '1 1 100px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', color: '#0f172a' }} />
+                  <input required type="number" min="0" value={stockProducto || ''} onChange={e => setStockProducto(Number(e.target.value))} placeholder="Stock" style={{ flex: '1 1 100px', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', color: '#0f172a' }} />
                   
                   <div style={{ display: 'flex', gap: '6px', width: '100%', marginTop: '4px', justifyContent: 'flex-end' }}>
                     {idProductoEditando && (
@@ -340,8 +383,8 @@ export default function App({ onLogout }: AppProps) {
 
           {/* SECCIÓN DERECHA: CAJA PUNTO DE VENTA (SÓLO VENDEDORES) */}
           {role !== 'ADMIN' && (
-            <section style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '2px solid #0f172a', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <h2 style={{ marginTop: 0, fontSize: '18px', fontWeight: 800, borderBottom: '2px solid #0f172a', paddingBottom: '10px', marginBottom: '16px' }}>
+            <section style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h2 style={{ marginTop: 0, fontSize: '18px', fontWeight: 800, borderBottom: '2px solid #0f172a', paddingBottom: '10px', marginBottom: '16px', color: '#0f172a' }}>
                 Caja (Emitir Boleta)
               </h2>
               
@@ -354,14 +397,14 @@ export default function App({ onLogout }: AppProps) {
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px' }}>
                     {carrito.map((item) => (
                       <li key={item.producto.id_producto} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ fontWeight: 500, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 500, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>
                           {item.producto.nombre_producto}
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#f1f5f9', padding: '2px', borderRadius: '6px' }}>
-                            <button onClick={() => decrementarCantidad(item.producto.id_producto)} style={{ background: '#e2e8f0', border: 'none', width: '22px', height: '22px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                            <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 700, fontSize: '13px' }}>{item.cantidad}</span>
-                            <button onClick={() => agregarAlCarrito(item.producto)} style={{ background: '#e2e8f0', border: 'none', width: '22px', height: '22px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                            <button onClick={() => decrementarCantidad(item.producto.id_producto)} style={{ background: '#e2e8f0', color: '#0f172a', border: 'none', width: '22px', height: '22px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                            <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>{item.cantidad}</span>
+                            <button onClick={() => agregarAlCarrito(item.producto)} style={{ background: '#e2e8f0', color: '#0f172a', border: 'none', width: '22px', height: '22px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
                           </div>
                           <span style={{ fontWeight: 600, minWidth: '70px', textAlign: 'right', color: '#334155' }}>
                             ${(item.producto.precio * item.cantidad).toLocaleString('es-CL')}
@@ -396,8 +439,8 @@ export default function App({ onLogout }: AppProps) {
         </div>
 
         {/* HISTORIAL GENERAL DE BOLETAS EMITIDAS */}
-        <section style={{ marginTop: '40px', backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-          <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700 }}>Historial de Ventas Registradas</h2>
+        <section style={{ marginTop: '40px', backgroundColor: '#ffffff', color: '#0f172a', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Historial de Ventas Registradas</h2>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 20px' }}>
             {role === 'ADMIN' 
               ? 'Vista de Auditoría (Admin): Desplegando el flujo total de cajas y vendedores.' 
@@ -423,7 +466,7 @@ export default function App({ onLogout }: AppProps) {
                     {v.details?.map(d => (
                       <div key={d.id_detalle} style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', margin: '4px 0' }}>
                         <span>• {d.product?.nombre_producto} <span style={{ color: '#94a3b8' }}>x{d.cantidad}</span></span>
-                        <span style={{ fontWeight: 500 }}>${(d.precio_unitario * d.cantidad).toLocaleString('es-CL')}</span>
+                        <span style={{ fontWeight: 500, color: '#0f172a' }}>${(d.precio_unitario * d.cantidad).toLocaleString('es-CL')}</span>
                       </div>
                     ))}
                   </div>
